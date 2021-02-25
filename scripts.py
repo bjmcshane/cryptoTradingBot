@@ -7,9 +7,24 @@ import pickle
 import os.path
 from os import path
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import config as cfg
 
+
+
+class transaction:
+    date=""
+    action=""
+    coin = ""
+    quantity=0
+    valueUSD = 0
+
+    def __init__(self, date, action, coin, quantity, usd):
+        self.date = date
+        self.action = action
+        self.coin = coin
+        self.quantity = quantity
+        self.valueUSD = usd
 
 class coin:
     name=""
@@ -55,7 +70,7 @@ class coin:
         #print(eth.info)
         print(eth.actions)
         print('=================================')
-        print(eth.financials)
+        #print(eth.financials)
         print('=================================')
         print(eth.major_holders)
         print('=================================')
@@ -70,7 +85,8 @@ class coin:
 
 
 
-
+# this bot should analyze markets daily, shoot me a text based off my backtested strategies
+# on whether or not to buy or sell cryptocurrencies
 class cryptoBot:
     coin_data = pd.DataFrame()
     transactions = pd.DataFrame()
@@ -80,43 +96,18 @@ class cryptoBot:
     current_date=""
     delta_date=""
     rsi_window=0
-    transactions = ""
-    bearish = False
-    bullish = False
-    buy = False
-    sell = False
-    holdings = []
+
+    # pickle data
+    state = {}
+    wallet = []
+    transactions = []
 
     def __init__(self):
         self.load_config_data()
         self.get_crypto_data()
 
-    # this is just my method for describing the pandas dataframe that stores my coin information
-    def data_info(self):
-        self.data.info()
-        print(self.data.describe())
-
-    # graphs simple moving average crossover algorithm
-    def graph_smac(self):
-        data = self.data
-        sma1label = "SMA1 (", self.small_window, ")"
-        sma2label = "SMA2 (", self.big_window, ")"
-
-        plt.figure(figsize=(8,5))
-        plt.plot(data['SMA1'], 'g--', label=sma1label)
-        plt.plot(data['SMA2'], 'r--', label=sma2label)
-        plt.plot(data['Close'], label="Close")
-        plt.legend()
-        plt.show()
-    
-    # is going to graph the bollinger bands algorithm
-    def graph_bands(self):
-        data = self.data
 
 
-
-    # loads the config.py file and all the settings I have in it
-    # coin name, moving average window size, total days of coin info to fetch, etc.
     def load_config_data(self):
         self.coin = cfg.config["coin"]
         self.total_days = cfg.config["days"]
@@ -125,6 +116,7 @@ class cryptoBot:
         self.rsi_window = cfg.config["rsi_window"]
         self.small_window = cfg.config["smac_fast_period"]
         self.big_window = cfg.config["smac_slow_period"]
+
 
     # uses yahoo finance to collect information on coin given in config.py
     # also computes numbers for several strategies and attaches them to self.data
@@ -137,36 +129,100 @@ class cryptoBot:
         self.data["SMA1"] = self.data['Close'].rolling(window=self.small_window).mean()
         self.data["SMA2"] = self.data['Close'].rolling(window=self.big_window).mean() 
 
-        fasterma = self.data["SMA1"][len(self.data["SMA1"]-1)]
-        slowerma = self.data["SMA2"][len(self.data["SMAw"]-1)]
+        '''
+        fasterma = self.data["SMA1"][len(self.data["SMA1"])-1]
+        slowerma = self.data["SMA2"][len(self.data["SMAw"])-1]
 
         if self.bearish and fasterma > slowerma:
             self.bearish = False
             self.bullish = True
+        '''
+
+
+    # this is just my method for describing the pandas dataframe that stores my coin information
+    def data_info(self):
+        self.data.info()
+        print(self.data.describe())
+
+    # graphs simple moving average crossover algorithm
+    def graph_smac(self):
+        data = self.data
+        sma1label = "SMA1 ({})".format(self.small_window)
+        sma2label = "SMA2 ({})".format(self.big_window)
+        #sma1label = "SMA1 (", self.small_window, ")"
+        #sma2label = "SMA2 (", self.big_window, ")"
+
+        plt.figure(figsize=(8,5))
+        plt.plot(data['SMA1'], 'g--', label=sma1label)
+        plt.plot(data['SMA2'], 'r--', label=sma2label)
+        plt.plot(data['Close'], label="Close")
+        plt.legend()
+        plt.show()
+    
+    # is going to graph the bollinger bands algorithm
+    def graph_bands(self):
+        data = self.data
+        lowerbandlabel = "lower band"
+        middlebandlabel = "middle band"
+        upperbandlabel = "upper band"
+
+        plt.figure(figsize=(8,5))
+        plt.plot(data['lower_band'], 'g--', label=lowerbandlabel)
+        plt.plot(data['middle_band'], 'r--', label=middlebandlabel)
+        plt.plot(data['upper_band'], 'b--', label=upperbandlabel)
+
+        plt.plot(data['Close'], label="Close")
+        plt.legend()
+        plt.show()
 
         # Bolllinger Bands
-        self.data['middle_band'] = self.data['Close'].rolling(window=20).mean()
-        self.data['upper_band'] = self.data['Close'].rolling(window=20).mean() + self.data['Close'].rolling(window=20).std()*2
         self.data['lower_band'] = self.data['Close'].rolling(window=20).mean() - self.data['Close'].rolling(window=20).std()*2
+        self.data['middle_band'] =self.data['Close'].rolling(window=20).mean()
+        self.data['upper_band'] = self.data['Close'].rolling(window=20).mean() + self.data['Close'].rolling(window=20).std()*2
 
-
-
-    # will tell me to buy or sell the given coin depending on if the market is bearish or bullish
-    def buy_or_sell():
-        print('this is where I test if I should buy or sell (currently based of SMAC')
- 
 
 
     # loads data on my holdings and transactions
     def load_pickled_data(self):
         if path.exists("state.pickle"):
-            print("found saved state, loading")
             with open('state.pickle', 'rb') as f:
-                self.transactions = pickle.load(f)
-
+                self.state = pickle.load(f)
+        else: # no save state/wallet/transaction list exists 
+            self.state = {
+                self.coin : False
+            }
+            
+        if path.exists('wallet.pickle', 'rb'):
             with open('wallet.pickle', 'rb') as f:
                 self.wallet = pickle.load(f)
-    
+        else:
+            self.wallet = []
+        
+        if path.exists('transactions.pickle', 'rb'):
+            with open('transactions.pickle', 'rb') as f:
+                self.transactions = pickle.load(f)
+        else:
+            self.transactions = []
+
+        #if path.exists("wallet.pickle"):
+        
+
+
+    # will tell me to buy or sell the given coin depending on if the market is bearish or bullish
+    def buy_or_sell(self):
+        fasterma = self.data["SMA1"][len(self.data["SMA1"])-1]
+        slowerma = self.data["SMA2"][len(self.data["SMA2"])-1]
+
+        print("faster moving average: ", fasterma)
+        print("slower moving average: ", slowerma)
+
+        if fasterma > slowerma:
+            print("the faster moving average is above the slower one, implying a bullish market")
+        else:
+            print("the slower moving average is above the faster one, implying a bearish market")
+
+
+
     # saves data on my holdings and transactions (hopefully will end up being able to plug these numbers into a ML model)
     def pickle_data(self):
         with open('state.pickle', 'wb'):
@@ -175,16 +231,25 @@ class cryptoBot:
         with open('wallet.pickle', 'wb') as f:
             pickle.dump(self.wallet, f)
 
-        print("this is for loading info of what coins/cash I have available")
+        with open('transactions.pickle', 'wb') as f:
+            pickle.dump(self.transactions, f)
 
 
     # based off the results of buy_or_sell() will add transaction/holding information to current state
     def add_transaction(self):
         print("this is where I'm going to save my buys/saves")
-        buysell = input("did you buy or sell?")
-        coin = input("which coin did you buy/sell?")
-        coin_val = input("coin value?")
-        usd = input("value usd?")
+        if input("Did this transaction happen today? ") == "y":
+            date = datetime.now().date()
+        else:
+            year = input("what year ")
+            month = input("what month ")
+            day = input("what day ")
+            dateString = "{}-{}-{}".format(year, month, day)
+            date = date.fromisoformat(dateString)
+        #buysell = input("did you buy or sell?")
+        #coin = input("which coin did you buy/sell?")
+        #coin_val = input("coin value?")
+        #usd = input("value usd?")
 
         newRow = [self.current_date, buysell, coin, coin_val, usd]
 
@@ -212,15 +277,41 @@ class cryptoBot:
     
     # will eventually add sentiment analysis to my computations
     def sentimentAnalysis(self):
-        print("the is where I do sentiment analyis")
+        print("the is where I do sentiment analysis")
     
 def main():
-    m = cryptoBot()
+    #m = cryptoBot() # just calls loadConfigData and getCryptoData
     #m.data_info()
     #m.graph_smac()
-    c = coin("bananas", 12341)
+    #m.graph_bands()
+
+    #m.buy_or_sell()
+
+
+
+
+    #c = coin("bananas", 12341)
     #c.yftomfoolery()
-    c.update_coin_data()
+    #c.update_coin_data()
+
+
+    dateString = "{}-{}-{}".format("2021", "01", "25")
+    date1 = date.fromisoformat(dateString)
+    date2 = datetime.now().date()
+    
+    print(type(date1))
+    print(type(date2))
+
+
+    # initial state should look something like
+    # wallet : coin["eth, quantity, originalVal, currentVal, dateBought, percentIncrease"]
+    # transactions : [1/25/21, Buy, ETH, coin-value, usd]
+    # markets: { for right now markets can just be a single boolean value cause we're just using one strat
+    # on one coin, might want to convert it into a nested JSON afterwards
+    #   ETH: {
+    #       SMAC: bullish
+    #   }
+    # }
 
 
 __name__ = "main"
