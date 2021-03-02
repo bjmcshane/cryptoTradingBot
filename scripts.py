@@ -88,14 +88,14 @@ class coin:
 # this bot should analyze markets daily, shoot me a text based off my backtested strategies
 # on whether or not to buy or sell cryptocurrencies
 class cryptoBot:
-    coin_data = pd.DataFrame()
-    transactions = pd.DataFrame()
-    current_wallet = pd.DataFrame()
-    total_days=0
-    coin = ""
-    current_date=""
-    delta_date=""
-    rsi_window=0
+    coin_data = pd.DataFrame() # maybe where I store data on coins, not sure I'll need this
+    transactions = pd.DataFrame() # where I store my history of transactions (check above)
+    current_wallet = pd.DataFrame() # where I store my current holdings
+    total_days=0 # the total number days of crypto data I'm collecting
+    coin = "" # name of the coin I'm currently working with, might end up being a list of coins
+    current_date="" # the current date
+    delta_date="" # the older date representing the window of data I need for SMAC
+    rsi_window=0 # the window I'm using for RSI, should be set in config.py
 
     # pickle data
     state = {}
@@ -113,9 +113,9 @@ class cryptoBot:
         self.total_days = cfg.config["days"]
         self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.delta_date = (datetime.now() - timedelta(self.total_days)).strftime("%Y-%m-%d")
-        self.rsi_window = cfg.config["rsi_window"]
-        self.small_window = cfg.config["smac_fast_period"]
-        self.big_window = cfg.config["smac_slow_period"]
+        self.rsi_window = cfg.config["rsi_parameters"]["rsi_window"]
+        self.small_window = cfg.config["smac_parameters"]["smac_fast_period"]
+        self.big_window = cfg.config["smac_parameters"]["smac_slow_period"]
 
 
     # uses yahoo finance to collect information on coin given in config.py
@@ -225,7 +225,7 @@ class cryptoBot:
 
     # saves data on my holdings and transactions (hopefully will end up being able to plug these numbers into a ML model)
     def pickle_data(self):
-        with open('state.pickle', 'wb'):
+        with open('state.pickle', 'wb') as f:
             pickle.dump(self.state, f)
         
         with open('wallet.pickle', 'wb') as f:
@@ -238,7 +238,7 @@ class cryptoBot:
     # based off the results of buy_or_sell() will add transaction/holding information to current state
     def add_transaction(self):
         print("this is where I'm going to save my buys/saves")
-        if input("Did this transaction happen today? ") == "y":
+        if input("Did this transaction happen today(y/n)? ") == "y":
             date = datetime.now().date()
         else:
             year = input("what year ")
@@ -246,10 +246,13 @@ class cryptoBot:
             day = input("what day ")
             dateString = "{}-{}-{}".format(year, month, day)
             date = date.fromisoformat(dateString)
+        
+
         #buysell = input("did you buy or sell?")
         #coin = input("which coin did you buy/sell?")
         #coin_val = input("coin value?")
         #usd = input("value usd?")
+        newTransaction = transaction()
 
         newRow = [self.current_date, buysell, coin, coin_val, usd]
 
