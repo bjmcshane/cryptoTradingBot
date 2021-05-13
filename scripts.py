@@ -44,9 +44,9 @@ class coin:
         closing_data = data["Close"]
         self.currentValueUSD = closing_data[30]*quantity
         self.originalValueUSD = closing_data[30]*quantity
-        self.percentIncrease = 0 
+        self.percentIncrease = 0
 
-    
+
     def update_coin_data(self):
         today = datetime.now().strftime("%Y-%m-%d")
         delta_date = (datetime.now() - timedelta(30))
@@ -64,7 +64,7 @@ class coin:
         print('current value in USD', self.currentValueUSD)
         print('percent increase/decrease: ', self.percentIncrease)
         print("=================================")
-    
+
     def yftomfoolery(self):
         eth = yf.Ticker("ETH-USD")
         #print(eth.info)
@@ -87,7 +87,7 @@ class coin:
 
 # this bot should analyze markets daily, shoot me a text based off my backtested strategies
 # on whether or not to buy or sell cryptocurrencies
-class cryptoBot:
+class tradingBot:
     coin_data = pd.DataFrame() # maybe where I store data on coins, not sure I'll need this
     transactions = pd.DataFrame() # where I store my history of transactions (check above)
     current_wallet = pd.DataFrame() # where I store my current holdings
@@ -127,7 +127,7 @@ class cryptoBot:
 
         # SMAC
         self.data["SMA1"] = self.data['Close'].rolling(window=self.small_window).mean()
-        self.data["SMA2"] = self.data['Close'].rolling(window=self.big_window).mean() 
+        self.data["SMA2"] = self.data['Close'].rolling(window=self.big_window).mean()
 
         '''
         fasterma = self.data["SMA1"][len(self.data["SMA1"])-1]
@@ -158,7 +158,7 @@ class cryptoBot:
         plt.plot(data['Close'], label="Close")
         plt.legend()
         plt.show()
-    
+
     # is going to graph the bollinger bands algorithm
     def graph_bands(self):
         data = self.data
@@ -187,17 +187,17 @@ class cryptoBot:
         if path.exists("state.pickle"):
             with open('state.pickle', 'rb') as f:
                 self.state = pickle.load(f)
-        else: # no save state/wallet/transaction list exists 
+        else: # no save state/wallet/transaction list exists
             self.state = {
                 self.coin : False
             }
-            
+
         if path.exists('wallet.pickle', 'rb'):
             with open('wallet.pickle', 'rb') as f:
                 self.wallet = pickle.load(f)
         else:
             self.wallet = []
-        
+
         if path.exists('transactions.pickle', 'rb'):
             with open('transactions.pickle', 'rb') as f:
                 self.transactions = pickle.load(f)
@@ -205,7 +205,7 @@ class cryptoBot:
             self.transactions = []
 
         #if path.exists("wallet.pickle"):
-        
+
 
 
     # will tell me to buy or sell the given coin depending on if the market is bearish or bullish
@@ -227,7 +227,7 @@ class cryptoBot:
     def pickle_data(self):
         with open('state.pickle', 'wb') as f:
             pickle.dump(self.state, f)
-        
+
         with open('wallet.pickle', 'wb') as f:
             pickle.dump(self.wallet, f)
 
@@ -246,7 +246,7 @@ class cryptoBot:
             day = input("what day ")
             dateString = "{}-{}-{}".format(year, month, day)
             date = date.fromisoformat(dateString)
-        
+
 
         #buysell = input("did you buy or sell?")
         #coin = input("which coin did you buy/sell?")
@@ -256,7 +256,7 @@ class cryptoBot:
 
         newRow = [self.current_date, buysell, coin, coin_val, usd]
 
-    # I've currently moved algorithm computation to the get_coin_data() method, hopefully find a use for this code later on 
+    # I've currently moved algorithm computation to the get_coin_data() method, hopefully find a use for this code later on
     def RSI(self):
         nums = self.data["Close"][self.total_days-self.rsi_window:self.total_days]
         i=0
@@ -270,18 +270,18 @@ class cryptoBot:
             if(diff==0):
                 i+=1
                 continue
-            
+
             upPrices.append(diff) if second > first else downPrices.append(diff)
             i+=1
-        
+
         avgGain = sum(upPrices)/len(upPrices)
         avgLoss = sum(downPrices)/len(downPrices)
         #return 100 - 100/(1/(1+ratio))#there's a step after this I think?
-    
+
     # will eventually add sentiment analysis to my computations
     def sentimentAnalysis(self):
         print("the is where I do sentiment analysis")
-    
+
 def main():
     #m = cryptoBot() # just calls loadConfigData and getCryptoData
     #m.data_info()
@@ -301,7 +301,7 @@ def main():
     dateString = "{}-{}-{}".format("2021", "01", "25")
     date1 = date.fromisoformat(dateString)
     date2 = datetime.now().date()
-    
+
     print(type(date1))
     print(type(date2))
 
